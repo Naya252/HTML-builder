@@ -26,9 +26,6 @@ function writeToLogFile(text) {
 // Слушаем событие ввода пользователя
 rl.on('line', (input) => {
   if (input.toLowerCase() === 'exit') {
-    // Если введено "exit", завершаем процесс
-    console.log('Прощай! Завершаем процесс.');
-    writeStream.close();
     process.exit();
   } else {
     // В противном случае записываем введенный текст в файл
@@ -39,8 +36,7 @@ rl.on('line', (input) => {
   }
 });
 
-// Обработка события завершения процесса (Ctrl + C)
-process.on('SIGINT', () => {
+process.on('exit', () => {
   console.log('Прощай! Завершаем процесс.');
   writeStream.close();
   process.exit();
