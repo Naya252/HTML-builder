@@ -27,15 +27,6 @@ async function readFile(url) {
   }
 }
 
-async function getStats(url) {
-  try {
-    const stats = await fs.stat(url);
-    return stats;
-  } catch (err) {
-    console.log(`Файла/Директории не существует: ${err}`);
-    throw err;
-  }
-}
 // Сборка CSS файла
 async function buildStyles() {
   try {
@@ -44,7 +35,7 @@ async function buildStyles() {
 
     for (const file of files) {
       const stylePath = path.resolve(inputStylesPath, file);
-      const stats = await getStats(stylePath);
+      const stats = await fs.stat(stylePath);
       // Проверка, что объект является css файлом
       if (stats.isFile() && path.parse(file).ext.slice(1) === 'css') {
         // Чтение файла
@@ -64,7 +55,7 @@ async function cleanFolder(folderPath) {
 
     for (const item of items) {
       const childPath = path.join(folderPath, item);
-      const stats = await getStats(childPath);
+      const stats = await fs.stat(childPath);
       // Удаление файла
       if (stats.isFile()) {
         await fs.unlink(childPath);
@@ -90,7 +81,7 @@ async function copyFolder(input, out) {
       const originPath = path.join(input, item);
       const copiedPath = path.join(out, item);
 
-      const stats = await getStats(originPath);
+      const stats = await fs.stat(originPath);
       // Копирование файла
       if (stats.isFile()) {
         await fs.copyFile(originPath, copiedPath);
@@ -109,7 +100,7 @@ async function copyFolder(input, out) {
 // Проверка существования папки
 async function checkFolder(folderPath) {
   try {
-    const stats = await getStats(folderPath);
+    const stats = await fs.stat(folderPath);
     if (stats.isDirectory()) {
       await cleanFolder(folderPath);
       return true;
@@ -138,7 +129,7 @@ async function buildHtml() {
 
     for (const component of components) {
       const componentPath = path.resolve(htmlComponentsPath, component);
-      const stats = await getStats(componentPath);
+      const stats = await fs.stat(componentPath);
       // Проверка, что объект является html файлом
       if (stats.isFile() && path.parse(component).ext.slice(1) === 'html') {
         // Название шаблона
