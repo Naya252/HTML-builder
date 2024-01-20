@@ -11,13 +11,16 @@ const outStylesPath = path.resolve(__dirname, 'project-dist', 'style.css');
 const inputAssetsPath = path.resolve(__dirname, 'assets');
 const outAssetsPath = path.resolve(__dirname, 'project-dist', 'assets');
 
+const inputHtmlPath = path.resolve(__dirname, 'template.html');
+const htmlComponentsPath = path.resolve(__dirname, 'components');
+const outHtmlPath = path.resolve(__dirname, 'project-dist', 'index.html');
+
 async function readFile(url) {
   try {
     const readStream = createReadStream(url);
     for await (const data of readStream) {
       return data.toString();
     }
-
     return readStream;
   } catch (err) {
     console.log(`Ошибка чтения файла: ${err}`);
@@ -29,10 +32,11 @@ async function getStats(url) {
     const stats = await fs.stat(url);
     return stats;
   } catch (err) {
-    console.log(`Ошибка получения данных о файле: ${err}`);
+    console.log(`Файла/Директории не существует: ${err}`);
+    throw err;
   }
 }
-
+// Сборка CSS файла
 async function buildStyles() {
   try {
     const files = await fs.readdir(inputStylesPath);
@@ -60,11 +64,12 @@ async function cleanFolder(folderPath) {
 
     for (const item of items) {
       const childPath = path.join(folderPath, item);
-      const stats = await fs.stat(childPath);
-
+      const stats = await getStats(childPath);
+      // Удаление файла
       if (stats.isFile()) {
         await fs.unlink(childPath);
       }
+      // Очистка и удаление папки
       if (stats.isDirectory()) {
         await cleanFolder(childPath);
         await fs.rmdir(childPath);
@@ -85,10 +90,12 @@ async function copyFolder(input, out) {
       const originPath = path.join(input, item);
       const copiedPath = path.join(out, item);
 
-      const stats = await fs.stat(originPath);
+      const stats = await getStats(originPath);
+      // Копирование файла
       if (stats.isFile()) {
         await fs.copyFile(originPath, copiedPath);
       }
+      // Копирование папки
       if (stats.isDirectory()) {
         await fs.mkdir(copiedPath, { recursive: true });
         await copyFolder(originPath, copiedPath);
@@ -99,14 +106,16 @@ async function copyFolder(input, out) {
   }
 }
 
+// Проверка существования папки
 async function checkFolder(folderPath) {
   try {
-    const stats = await fs.stat(folderPath);
+    const stats = await getStats(folderPath);
     if (stats.isDirectory()) {
       await cleanFolder(folderPath);
       return true;
     }
   } catch (error) {
+    // Если папки нет - создаем новую
     if (error.message.includes('no such file or directory')) {
       await fs.mkdir(folderPath, { recursive: true });
       return true;
@@ -117,30 +126,18 @@ async function checkFolder(folderPath) {
     return;
   }
 }
-
-async function copyAssets() {
-  await copyFolder(inputAssetsPath, outAssetsPath);
-}
-
-async function buildPage() {
-  await checkFolder(distPath);
-}
-
+// Сборка HTML файла
 async function buildHtml() {
   try {
-    const writeStream = createWriteStream(
-      path.resolve(__dirname, 'project-dist', 'index.html'),
-    );
+    const writeStream = createWriteStream(outHtmlPath);
 
-    const mainHtml = await fs.readFile(
-      path.resolve(__dirname, 'template.html'),
-    );
-    const components = await fs.readdir(path.resolve(__dirname, 'components'));
+    const mainHtml = await fs.readFile(inputHtmlPath);
+    const components = await fs.readdir(htmlComponentsPath);
 
     let html = mainHtml.toString();
 
     for (const component of components) {
-      const componentPath = path.resolve(__dirname, 'components', component);
+      const componentPath = path.resolve(htmlComponentsPath, component);
       const stats = await getStats(componentPath);
       // Проверка, что объект является html файлом
       if (stats.isFile() && path.parse(component).ext.slice(1) === 'html') {
@@ -157,6 +154,15 @@ async function buildHtml() {
   } catch (err) {
     console.log(`Ошибка сборки html: ${err}`);
   }
+}
+
+async function copyAssets() {
+  await copyFolder(inputAssetsPath, outAssetsPath);
+}
+
+async function buildPage() {
+  await checkFolder(distPath);
+  return true;
 }
 
 buildPage().then(() => {
